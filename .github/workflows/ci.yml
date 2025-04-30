@@ -1,4 +1,4 @@
-name: Deploy to EC2
+name: Deploy to EC2 with Docker
 
 on:
   push:
@@ -15,16 +15,28 @@ jobs:
 
       - name: Setup SSH connexion
         run: |
-          sudo mkdir -p ~/.ssh
-          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" | base64 --decode > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
           ssh-keyscan -H ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts
 
-      - name: Deploy to EC2 with docker
+      - name: Deploy on EC2 with Docker
         run: |
-          ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} << 'EOF'
+          ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} << 'EOF'
             cd ${{ secrets.WORK_DIR }}
-            git pull origin ${{ secrets.MAIN_BRANCH }}
+
+            echo "Pulling latest code..."
+            git pull origin main
+
+            echo "Stopping old container..."
+            docker-compose down
+
+            echo "Removing old image..."
+            docker system prune -af
+
+            echo "Rebuilding and starting new container..."
+            docker-compose up --build -d
           EOF
-      - name: Cleanup
+
+      - name: Cleanup SSH
         run: rm -rf ~/.ssh
