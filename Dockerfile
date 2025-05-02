@@ -2,7 +2,7 @@
 FROM node:18 AS build
 
 # Définition du répertoire de travail dans le conteneur
-WORKDIR /app
+WORKDIR /serveur-aws-daniel
 
 # Copie des fichiers package.json et package-lock.json
 COPY package*.json ./
@@ -19,9 +19,9 @@ FROM node:18
 
 RUN npm install -g serve
 
-WORKDIR /app
+WORKDIR /serveur-aws-daniel
 
-COPY --from=build /app/build .
+COPY --from=build /serveur-aws-daniel/build .
 
 # Exposition du port utilisé par l'application (ex: 3000)
 EXPOSE 3000

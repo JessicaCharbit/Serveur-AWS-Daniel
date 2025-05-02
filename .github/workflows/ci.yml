@@ -13,6 +13,9 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
 
+      - name: Install shh client
+        uses: sudo apt-get install -y openssh-client
+
       - name: Setup SSH connexion
         run: |
           mkdir -p ~/.ssh
@@ -20,21 +23,17 @@ jobs:
           chmod 600 ~/.ssh/id_rsa
           ssh-keyscan -H ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts
 
+      - name: Connect & deploy
+        run: |
+          ssh -i ~/.ssh/id_rsa ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} << 'EOF'
+            cd ${{ secrets.WORK_DIR }}
+            git pull origin main
+          EOF
+
       - name: Deploy on EC2 with Docker
         run: |
-          ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} << 'EOF'
-            cd ${{ secrets.WORK_DIR }}
-
-            echo "Pulling latest code..."
-            git pull origin main
-
-            echo "Stopping old container..."
-            docker-compose down
-
-            echo "Removing old image..."
+          docker-compose down << 'EOF'
             docker system prune -af
-
-            echo "Rebuilding and starting new container..."
             docker-compose up --build -d
           EOF
 
